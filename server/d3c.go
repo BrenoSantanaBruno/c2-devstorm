@@ -16,13 +16,15 @@ func startListener(port string) {
 	if err != nil {
 		log.Fatal("Erro ao iniciar o Listener", err.Error())
 	} else {
-		canal, err := listener.Accept()
-		defer canal.Close()
+		for {
+			channel, err := listener.Accept()
+			defer channel.Close()
 
-		if err != nil {
-			log.Println("Erro em um novo canal:", err.Error())
+			if err != nil {
+				log.Println("Erro em um novo canal:", err.Error())
+			}
+
+			log.Println("Nova Conexão: ", channel.RemoteAddr().String())
 		}
-
-		log.Println("Nova Conexão: ", canal.RemoteAddr().String())
 	}
 }
