@@ -82,6 +82,8 @@ func selectHandler(command []string) {
 			log.Println("To list agentList use: show agents.")
 
 		}
+	} else {
+		selectedAgent = " "
 	}
 }
 
