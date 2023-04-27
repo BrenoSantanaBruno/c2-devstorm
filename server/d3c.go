@@ -48,10 +48,26 @@ func cliHandler() {
 			case "show":
 				showhandler(separeteCommand)
 			case "select":
-				selectHandler(separeteCommand)
+				selectHandler(separeteCommand) fagemd
 			default:
-				log.Println("unknown command.")
+				if selectedAgent != "" {
+					command := &commons.Commands{Command: completeCommand}
+					command.Command = completeCommand
+
+					for index, message := range agentList {
+						if message.AgentID == selectedAgent {
+							agentList[index].Commands = append(agentList[index].Commands, *command)
+							channel, _ := net.Dial("tcp", message.AgentHostname+":"+message.AgentPort)
+							defer channel.Close()
+							gob.NewEncoder(channel).Encode(message)
+							gob.NewDecoder(channel).Decode(message)
+						}
+					}
+				} else {
+					log.Println("unknown command.")
+				}
 			}
+
 		}
 	}
 }
@@ -59,6 +75,10 @@ func showhandler(command []string) {
 	if len(command) > 1 {
 		switch command[1] {
 		case "agents":
+			for _, agent := range agentList {
+				println("AgentID: " + agent.AgentID + " AgentHostname: " + agent.AgentHostname + "@" + " AgentCWD: " + "agent.AgentCWD")
+
+			}
 			agentLists(command[1])
 		default:
 			log.Println("unknown command.")
@@ -104,6 +124,8 @@ func agentCreated(agentID string) (registered bool) {
 
 // Function to check if message contains response
 func messageContainsResponse(message *commons.Message) (contains bool) {
+	log.Println("Agent ID: ", message.AgentID+"\n")
+
 	contains = false
 	for _, command := range message.Commands {
 		if command.Response != "" || command.Response != " " || len(command.Response) > 0 {
@@ -137,7 +159,6 @@ func startListener(port string) {
 				message := &commons.Message{}
 				gob.NewDecoder(channel).Decode(message)
 				if agentCreated(message.AgentID) {
-					log.Println("Agent Message: ", message.AgentID+"\n")
 
 					// TODO: Check if message contains response
 					if messageContainsResponse(message) {
@@ -157,6 +178,7 @@ func startListener(port string) {
 				} else {
 
 					log.Println("Nova Conexão: \n", channel.RemoteAddr().String())
+					log.Println("ID Agent: ", message.AgentID+"\n")
 					agentList = append(agentList, *message)
 				}
 

@@ -14,6 +14,7 @@ import (
 var (
 	message  commons.Message
 	timeLeft = 30
+	err      error
 )
 
 const (
@@ -23,7 +24,10 @@ const (
 
 func init() {
 	message.AgentHostname, _ = os.Hostname()
-	message.AgentCWD, _ = os.Getwd()
+	message.AgentCWD, err = os.Getwd()
+	if err != nil {
+		log.Println(err.Error())
+	}
 	message.AgentID = geraID()
 }
 
