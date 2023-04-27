@@ -13,7 +13,7 @@ import (
 var (
 	agents          = []commons.Message{}
 	selectedAgent   string
-	listenerPort    = "9091"
+	listenerPort    = "9092"
 	agentConnection net.Conn
 )
 
@@ -23,13 +23,35 @@ func main() {
 	handleCLI()
 }
 
+func handleAgentConnection(conn net.Conn) {
+	defer conn.Close()
+
+	var msg commons.Message
+	decoder := gob.NewDecoder(conn)
+	if err := decoder.Decode(&msg); err != nil {
+		log.Println("Error decoding message:", err)
+		return
+	}
+
+	log.Println("Received message from agent:", msg.AgentID)
+	agents = append(agents, msg)
+}
+
 func startListener(port string) {
-	listener, _ := net.Listen("tcp", "0.0.0.0:"+port)
-	defer listener.Close()
+	log.Println("Listener started on port:", port)
+	ln, err := net.Listen("tcp", ":"+port)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer ln.Close()
 
 	for {
-		connection, _ := listener.Accept()
-		go handleConnection(connection)
+		conn, err := ln.Accept()
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+		go handleAgentConnection(conn)
 	}
 }
 
@@ -77,7 +99,7 @@ func executeCommand(baseCommand string, command []string) {
 		showCommand(command)
 	case "select":
 		selectCommand(command)
-	default:
+	default: // execute command on selected agent
 		executeSelectedAgentCommand(baseCommand, command)
 	}
 }
@@ -131,7 +153,7 @@ func showCommand(command []string) {
 }
 
 func displayAgentList() {
-	for _, message := range agents {
-		log.Println(message.AgentID + " " + message.AgentHostname)
+	for index, message := range agents {
+		log.Println(index, message.AgentID+"@"+message.AgentHostname+" "+message.AgentOS+" "+message.AgentCWD)
 	}
 }

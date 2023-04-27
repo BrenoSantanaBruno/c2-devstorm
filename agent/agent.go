@@ -19,7 +19,7 @@ var (
 
 const (
 	SERVER = "127.0.0.1"
-	PORT   = "9091"
+	PORT   = "9092"
 )
 
 func init() {
