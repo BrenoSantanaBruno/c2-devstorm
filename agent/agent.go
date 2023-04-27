@@ -45,10 +45,16 @@ func connectToServer() (channel net.Conn) {
 	return channel
 }
 
+// Function to generate ID
 func geraID() string {
 	myTime := time.Now().String()
 
 	hasher := md5.New()
+	// hasher := sha1.New()
+	// hasher := sha256.New()
+	// hasher := sha384.New()
+	// hasher := sha512.New()
+
 	hasher.Write([]byte(message.AgentHostname + myTime))
 
 	return hex.EncodeToString(hasher.Sum(nil))

