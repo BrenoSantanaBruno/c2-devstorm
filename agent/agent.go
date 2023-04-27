@@ -13,7 +13,7 @@ import (
 
 var (
 	message  commons.Message
-	timeLeft = 5
+	timeLeft = 30
 )
 
 const (

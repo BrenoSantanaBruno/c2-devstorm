@@ -30,7 +30,7 @@ func cliHandler() {
 	for {
 
 		if selectedAgent != "" {
-			print(selectedAgent + "[c2-devstorm]")
+			print(selectedAgent + "[c2-devstorm]#")
 		} else {
 			print("[c2-devstorm]")
 
@@ -38,7 +38,7 @@ func cliHandler() {
 		// reader := bufio.NewReader(os.Stdin)
 		reader := bufio.NewReader(os.Stdin)
 		completeCommand, _ := reader.ReadString('\n')
-		println(completeCommand)
+		//println(completeCommand)
 		// completeCommand := "show agents"
 		separeteCommand := strings.Split(strings.TrimSuffix(completeCommand, "\n"), " ")
 		baseCommand := strings.TrimSpace(separeteCommand[0])
