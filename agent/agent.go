@@ -23,7 +23,7 @@ const (
 
 func init() {
 	message.AgentHostname, _ = os.Hostname()
-	message.AgentCWS, _ = os.Getwd()
+	message.AgentCWD, _ = os.Getwd()
 	message.AgentID = geraID()
 }
 

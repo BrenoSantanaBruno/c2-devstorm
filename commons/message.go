@@ -3,5 +3,6 @@ package commons
 type Message struct {
 	AgentID       string
 	AgentHostname string
-	AgentCWS      string
+	AgentCWD      string
+	Commands      []Commands
 }
